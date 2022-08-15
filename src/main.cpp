@@ -287,9 +287,6 @@ void updatePositions() {
 }
 
 void crop() {
-    print("Cropping: xy: (%d, %d), wh: (%d, %d)\n",
-        (int)cropRect.x, (int)cropRect.y, (int)cropRect.w, (int)cropRect.h);
-
     // crop at full size (just image data copy)
     byte_t * croppedData = (byte_t *)malloc(cropRect.w * cropRect.h * 4);
     for (int y = 0; y < cropRect.h; ++y) {
@@ -306,6 +303,9 @@ void crop() {
         croppedData,    cropRect.w,    cropRect.h,    0,
         newImg,         outputSize.w,  outputSize.h,  0, 4
     );
+
+    print("Cropped: xy: (%d, %d), wh: (%d, %d)\n",
+        (int)cropRect.x, (int)cropRect.y, (int)cropRect.w, (int)cropRect.h);
 
     // determine output filename
     char outFile[256];
@@ -337,8 +337,8 @@ int preWindow(EngineSetup & setup) {
     int err = 0;
     err = parseArgs(setup.args);
     if (err) return err;
-    printf("Output image size: %dx%d (%d:%d).\n", outputSize.w, outputSize.h, ratioNumer, ratioDenom);
-    printf("Output suffix: %s\n", suffix);
+    printf("Will ouput image size: %dx%d (%d:%d)\n", outputSize.w, outputSize.h, ratioNumer, ratioDenom);
+    printf("Will use suffix: %s\n", suffix);
 
     int x, y, w, h;
     glfwGetMonitorWorkarea(glfwGetPrimaryMonitor(), &x, &y, &w, &h);
@@ -466,7 +466,7 @@ int postInit(Args const & args) {
         return 1;
     }
 
-    print("%s (%dx%d) loaded\n", filename, imgw, imgh);
+    print("Loaded: %s (%dx%d)\n", filename, imgw, imgh);
     uint64_t texFlags = BGFX_SAMPLER_MAG_POINT|BGFX_SAMPLER_U_MIRROR|BGFX_SAMPLER_V_MIRROR;
 
     // setup image material/texture
