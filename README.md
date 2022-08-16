@@ -7,35 +7,30 @@ Command line image cropping utility with pop-up window to allow user to visually
 Usage:
 
 ```
-cropper <image> <size> <ratio (optional. default 1:1)> <suffix (optional. default _thumb)>
+cropper <image> <output_size> <output_filename (optional)>
 ```
 
-`<size>` can be any of the following. If both width and height are provided, ratio will be ignored.
-
-- `100`
-- `100x100`
-- `w100`
-- `h100`
-- `w100h100`
+`<output_size>` is formated: 100x100 or 100. A single number is assumed to be square.
+If `<output_filename>` is omitted: `_cropped` is appended to input image filename.
 
 Examples:
 
 ```
-$ cropper input.png w200 16:9 _thumb
-Will ouput image size: 200x113 (16:9)
-Will use suffix: _thumb
-Loaded: input.png (8000x6000)
-Cropped: xy: (2223, 2001), wh: (3553, 1999)
-Writing: input_thumb.png
+$ cropper image.png 100x200 image_t.png
+Will output image size: 100x200 (1:2)
+Will output to: image_t.png
+Loaded: image.png (8000x6000)
+Cropped: xy: (2667, 333), wh: (2667, 5333)
+Writing: image_t.png
 ```
 
 ```
-$ cropper input.png 200 
-Will ouput image size: 200x200 (1:1)
-Will use suffix: _thumb
-Loaded: input.png (8000x6000)
+$ cropper image.png 100
+Will output image size: 100x100 (1:1)
+Will output to: image_cropped.png
+Loaded: image.png (8000x6000)
 Cropped: xy: (2667, 1667), wh: (2667, 2667)
-Writing: input_thumb.png
+Writing: image_cropped.png
 ```
 
 ## Building

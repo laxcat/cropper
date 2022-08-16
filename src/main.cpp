@@ -11,7 +11,7 @@
 
 // populated by args
 char const * filename = nullptr;
-char const * suffix = nullptr;
+char outputFilename[256] = {0};
 size2 outputSize = {0, 0};
 int ratioNumer = 0;
 int ratioDenom = 0;
@@ -41,52 +41,22 @@ Rect cameraRect;
 Rect imageRect;
 Rect cropRect;
 
-void argCanBeRatioOrSuffix(char const * str, bool & canBeRatio, bool & canBeSuffix) {
-    if (!str) {
-        canBeRatio = false;
-        canBeSuffix = false;
-        return;
-    }
-    canBeRatio = true;
-    canBeSuffix = true;
-    bool foundColon = false;
-    int len = (int)strlen(str);
-    for (int i = 0; i < len; ++i) {
-        if (str[i] == ':') {
-            canBeSuffix = false;
-            foundColon = true;
-        }
-        if (str[i] != ':' && (str[i] < '0' || str[i] > '9')) canBeRatio = false;
-        if (!canBeRatio && !canBeSuffix) return;
-    }
-    if (!foundColon) canBeRatio = false;
-}
-
 int parseArgs(Args const & args) {
     char const * usageMsg =
         "Usage:\n"
-        "cropper <image> <size> <ratio (optional. default 1:1)> <suffix (optional. default _thumb)>\n"
+        "cropper <image> <output_size> <output_filename (optional)>\n"
         "\n"
-        "<size> can be any of the following. If both width and height are provided, ratio will be ignored.\n"
-        "    100\n"
-        "    100x100\n"
-        "    w100\n"
-        "    h100\n"
-        "    w100h100\n"
+        "<output_size> is formated: 100x100 or 100. A single number is assumed to be square.\n"
+        "If <output_filename> is omitted: _cropped is appended to input image filename.\n"
         "\n"
         "Examples:\n"
-        "cropper image.png w100 16:9 _thumb\n"
-        "cropper input.png h100\n";
+        "cropper image.png 100x200 image_t.png\n"
+        "cropper image.png 100\n";
 
     if (args.c < 3) {
         printf("Missing parameters.\n\n%s", usageMsg);
         return 1;
     }
-
-    // printf("parsing %d args\n", args.c);
-    // for (int i = 0; i < args.c; ++i) {
-    //     printf("arg %d: %s\n", i, args.v[i]);
-    // }
 
     filename = args.v[1];
 
@@ -100,26 +70,9 @@ int parseArgs(Args const & args) {
     // wh can take the following formats
     // 100
     // 100x100
-    // w100
-    // h100
-    // w100h100
     char * wStr = tempSizeStr; // defaults to start of string
     char * hStr = tempSizeStr;
     for (int i = 0; i < sizeStrLen; ++i) {
-        // w found. width string ahead
-        if (tempSizeStr[i] == 'w') {
-            tempSizeStr[i] = '\0';
-            wStr = &tempSizeStr[i+1];
-            if (hStr == tempSizeStr) hStr = nullptr;
-            continue;
-        }
-        // h found. height string ahead
-        if (tempSizeStr[i] == 'h') {
-            tempSizeStr[i] = '\0';
-            hStr = &tempSizeStr[i+1];
-            if (wStr == tempSizeStr) wStr = nullptr;
-            continue;
-        }
         // x found. width string behind, height string ahead.
         if (tempSizeStr[i] == 'x') {
             tempSizeStr[i] = '\0';
@@ -141,80 +94,35 @@ int parseArgs(Args const & args) {
         (hStr == wStr) ? outputSize.w :
         (hStr) ? atoi(hStr) :
         0;
-    // check to make sure we have at least one dimension. ratio will handle the rest
-    if (!outputSize.w && !outputSize.h) {
-        printf("Could not parse size \"%s\"\n", sizeStr);
+    // check to make sure we both dimensions
+    if (!outputSize.w || !outputSize.h) {
+        printf("Failed. Could not parse size \"%s\"\n", sizeStr);
         return 1;
     }
+    int div = gcd(outputSize.w, outputSize.h);
+    ratioNumer = outputSize.w / div;
+    ratioDenom = outputSize.h / div;
 
-    // suffix parameter might come one parameter early if both width/height are provided
-    char const * suffixStr = nullptr;
-
-    // determine ratio
-    // no need to parse ratio, will be ignored. get ratio from image size.
-    if (outputSize.w && outputSize.h) {
-        int temp = gcd(outputSize.w, outputSize.h);
-        ratioNumer = outputSize.w / temp;
-        ratioDenom = outputSize.h / temp;
-        // ratio already determined, but a 3rd parameter was provided... ignored ratio or output suffix?
-        if (args.c >= 4) {
-            char const * ratioStr = args.v[3];
-            bool canBeRatio, canBeSuffix;
-            argCanBeRatioOrSuffix(ratioStr, canBeRatio, canBeSuffix);
-            if (canBeRatio) {
-                printf("Both output width and height provided, ignoring provided ratio \"%s\"\n", ratioStr);
-            }
-            else if (canBeSuffix) {
-                suffixStr = ratioStr;
-            }
-            else {
-                printf("Cannot use suffix \"%s\"\n", ratioStr);
+    // parse output filename
+    // if not provided, append suffix to input image
+    if (args.c < 4) {
+        // determine output filename
+        outputFilename[0] = '\0';
+        strncat(outputFilename, filename, 255);
+        // remove extension from input filename
+        int sz = (int)strlen(outputFilename);
+        for (int i = sz - 1; sz >= 0; --i) {
+            if (outputFilename[i] == '.') {
+                outputFilename[i] = '\0';
+                break;
             }
         }
-        // printf("GCD of %d and %d = %d\n", outputSize.w, outputSize.h, temp);
+        strncat(outputFilename, "_cropped.png", 255-strlen(outputFilename));
     }
-    // parse ratio
+    // output was provided
     else {
-        char const * ratioStr = (args.c < 4) ? "1:1" : args.v[3];
-        // first copy ratio into temp string
-        int ratioStrLen = (int)strlen(ratioStr);
-        char * ratioNumerStr = (char *)malloc(ratioStrLen + 1);
-        strcpy(ratioNumerStr, ratioStr);
-        // find ratio mark ":", and split string with NULL mark
-        char * ratioDenomStr = nullptr;
-        for (int i = 0; i < ratioStrLen; ++i) {
-            if (ratioNumerStr[i] == ':') {
-                ratioNumerStr[i] = '\0';
-                ratioDenomStr = &ratioNumerStr[i+1];
-            }
-        }
-        // didn't find the ":" mark
-        if (!ratioDenomStr) {
-            printf("Could not parse ratio \"%s\"\n", ratioStr);
-            return 1;
-        }
-        // parse both sides of mark
-        ratioNumer = atoi(ratioNumerStr);
-        ratioDenom = atoi(ratioDenomStr);
-        free(ratioNumerStr);
-        // couldn't parse integers
-        if (!ratioNumer || !ratioDenom) {
-            printf("Could not parse ratio \"%s\"\n", ratioStr);
-            return 1;
-        }
-
-        float r = (float)ratioNumer / (float)ratioDenom;
-
-        // no width has been provided, use ratio to calculate
-        if (!outputSize.w) outputSize.w = (int)roundf(outputSize.h * r);
-        if (!outputSize.h) outputSize.h = (int)roundf(outputSize.w / r);
+        snprintf(outputFilename, sizeof(outputFilename), "%s", args.v[3]);
     }
-
-    // parse suffix
-    if (!suffixStr && args.c >= 5) suffixStr = args.v[4];
-    bool canBeRatio, canBeSuffix;
-    argCanBeRatioOrSuffix(suffixStr, canBeRatio, canBeSuffix);
-    suffix = (canBeSuffix) ? suffixStr : "_thumb";
 
     return 0;
 }
@@ -307,28 +215,12 @@ void crop() {
     print("Cropped: xy: (%d, %d), wh: (%d, %d)\n",
         (int)cropRect.x, (int)cropRect.y, (int)cropRect.w, (int)cropRect.h);
 
-    // determine output filename
-    char outFile[256];
-    outFile[0] = '\0';
-    strncat(outFile, filename, 255);
-    // remove extension from input filename
-    int sz = (int)strlen(outFile);
-    for (int i = sz - 1; sz >= 0; --i) {
-        if (outFile[i] == '.') {
-            outFile[i] = '\0';
-            break;
-        }
-    }
-    strncat(outFile, suffix, 256-sz);
-    strncat(outFile, ".png", 256-strlen(outFile));
-    // snprintf(outFile, 256-sz, "%s.png", suffix);
-
     // write file (always png for now)
     stbi_flip_vertically_on_write(1);
-    stbi_write_png(outFile, outputSize.w, outputSize.h, 4, newImg, 0);
+    stbi_write_png(outputFilename, outputSize.w, outputSize.h, 4, newImg, 0);
     //stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
 
-    print("Writing: %s\n", outFile);
+    print("Writing: %s\n", outputFilename);
 
     glfwSetWindowShouldClose(mm.window, 1);
 }
@@ -337,8 +229,8 @@ int preWindow(EngineSetup & setup) {
     int err = 0;
     err = parseArgs(setup.args);
     if (err) return err;
-    printf("Will ouput image size: %dx%d (%d:%d)\n", outputSize.w, outputSize.h, ratioNumer, ratioDenom);
-    printf("Will use suffix: %s\n", suffix);
+    printf("Will output image size: %dx%d (%d:%d)\n", outputSize.w, outputSize.h, ratioNumer, ratioDenom);
+    printf("Will output to: %s\n", outputFilename);
 
     int x, y, w, h;
     glfwGetMonitorWorkarea(glfwGetPrimaryMonitor(), &x, &y, &w, &h);
@@ -458,11 +350,16 @@ int postInit(Args const & args) {
     stbi_set_flip_vertically_on_load(1);
     imageData = stbi_load(filename, &imgw, &imgh, &imgc, 0);
 
+    if (!imageData) {
+        print("Failed. Could not load %s\n", filename);
+        return 1;
+    }
+
     updateCameraRect();
     imageRect = cameraRect.aspectFit((float)imgw, (float)imgh);
 
     if (imgw > maxts || imgh > maxts) {
-        print("%s (%d×%d) too big for max texture size: %d\n", filename, imgw, imgh, maxts);
+        print("Failed. %s (%dx%d) too big for max texture size: %d\n", filename, imgw, imgh, maxts);
         return 1;
     }
 
