@@ -171,12 +171,9 @@ function(BGFXCompileShaders)
 
     # create/append to custom target
     if(outputs)
-        message(STATUS "TARGET????? ${target}")
         if(TARGET ${target})
-            message(STATUS "TARGET????? add_dependencies")
             add_dependencies(${target} ${outputs})
         else()
-            message(STATUS "TARGET????? add_custom_target")
             add_custom_target(
                 ${target}
                 DEPENDS ${outputs}
