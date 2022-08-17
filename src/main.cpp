@@ -6,8 +6,13 @@
 #include "../engine/engine.h"
 #include "../engine/MrManager.h"
 #include "../engine/dev/print.h"
-#include "CropperQuad.h"
+#include "../engine/common/bgfx_extra.h"
 #include "../engine/common/Rect.h"
+#include "CropperQuad.h"
+
+// embedded shader
+#include "shader/cropper/vs_cropper.bin.inc"
+#include "shader/cropper/fs_cropper.bin.inc"
 
 // populated by args
 char const * filename = nullptr;
@@ -34,9 +39,6 @@ float panScale = 1.0f;
 bool zoomPosDirty = true;
 float zoomLinear = 0.0f;
 glm::vec2 pos = {0.0f, 0.0f};
-
-glm::vec2 cropRectTemp = {0.f, 0.f};
-
 Rect cameraRect;
 Rect imageRect;
 Rect cropRect;
@@ -340,7 +342,8 @@ int preWindow(EngineSetup & setup) {
 }
 
 int postInit(Args const & args) {
-    program = mm.memSys.loadProgram(mm.assetsPath, "vs_cropper", "fs_cropper");
+    // program = mm.memSys.loadProgram(mm.assetsPath, "vs_cropper", "fs_cropper");
+    program = createBGFXProgram(vs_cropper_bin, vs_cropper_bin_len, fs_cropper_bin, fs_cropper_bin_len);
 
     auto caps = bgfx::getCaps();
     int maxts = caps->limits.maxTextureSize;
