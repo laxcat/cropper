@@ -128,7 +128,30 @@ function(BGFXCompileShaders)
                 VERBATIM
                 COMMENT "Compiling ${type} shader ${input_display} for ${profile} to ${output_display}"
             )
-            list(APPEND outputs ${output})
+            # embed only
+            if(${args_embed})
+                set(output_final "${shader_dir}/${type}s_${name}.${profile}.bin.geninc")
+                set(output_final_display ${output_final})
+                if(${CMAKE_VERSION} VERSION_GREATER_EQUAL "3.20")
+                    cmake_path(RELATIVE_PATH output_final BASE_DIRECTORY ${CMAKE_BINARY_DIR} OUTPUT_VARIABLE output_final_display)
+                endif()
+                add_custom_command(
+                    OUTPUT  ${output_final}
+                    DEPENDS ${output}
+                    WORKING_DIRECTORY "${output_dir}"
+                    COMMAND "xxd"
+                            -i "${type}s_${name}.bin"
+                            > ${output_final}
+                    COMMAND_EXPAND_LISTS
+                    VERBATIM
+                    COMMENT "Converting shader ${output_display} to include ${output_final_display}"
+                )
+                # add output to output list
+                list(APPEND outputs ${output_final})
+            else()
+                # add output to output list
+                list(APPEND outputs ${output})
+            endif()
         endif()
     endmacro()
 
@@ -147,7 +170,13 @@ function(BGFXCompileShaders)
         endif()
 
         # set ouput directory
-        set(output_dir "${args_output_dir}/${api_name}")
+        # embed only
+        if(${args_embed})
+            set(output_dir "${CMAKE_BINARY_DIR}/temp_embed_${target}/${api_name}")
+        # if NOT embed...
+        else()
+            set(output_dir "${args_output_dir}/${api_name}")
+        endif()
 
         # create rule to make output directory
         add_custom_command(
@@ -170,15 +199,9 @@ function(BGFXCompileShaders)
     endforeach()
 
     # create/append to custom target
-    if(outputs)
-        if(TARGET ${target})
-            add_dependencies(${target} ${outputs})
-        else()
-            add_custom_target(
-                ${target}
-                DEPENDS ${outputs}
-            )
-        endif()
-    endif()
+    add_custom_target(
+        ${target}
+        DEPENDS ${outputs}
+    )
 
 endfunction()

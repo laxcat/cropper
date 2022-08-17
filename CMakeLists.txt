@@ -23,9 +23,9 @@ add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine")
 
 include(BGFXCompileShaders)
 BGFXCompileShaders(
+    embed
     shader_dirs     "${CMAKE_CURRENT_SOURCE_DIR}/src/shader/cropper"
     profile_list    "metal"
-    output_dir      "${CMAKE_BINARY_DIR}/assets/shaders"
     include_dirs    "${CMAKE_CURRENT_SOURCE_DIR}/engine/shader"
 )
 
