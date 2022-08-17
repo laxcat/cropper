@@ -11,8 +11,8 @@
 #include "CropperQuad.h"
 
 // embedded shader
-#include "shader/cropper/vs_cropper.bin.inc"
-#include "shader/cropper/fs_cropper.bin.inc"
+#include "shader/cropper/vs_cropper.bin.geninc"
+#include "shader/cropper/fs_cropper.bin.geninc"
 
 // populated by args
 char const * filename = nullptr;
