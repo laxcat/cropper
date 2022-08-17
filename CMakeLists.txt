@@ -21,6 +21,14 @@ set(BX_SILENCE_DEBUG_OUTPUT ON)
 set(SetupLib_include_dirs)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine")
 
+include(BGFXCompileShaders)
+BGFXCompileShaders(
+    shader_dirs     "${CMAKE_CURRENT_SOURCE_DIR}/src/shader/cropper"
+    profile_list    "metal"
+    output_dir      "${CMAKE_BINARY_DIR}/assets/shaders"
+    include_dirs    "${CMAKE_CURRENT_SOURCE_DIR}/engine/shader"
+)
+
 # EXE
 include_directories(${SetupLib_include_dirs})
 set(EXE_NAME cropper)
@@ -28,6 +36,7 @@ add_executable(${EXE_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
 target_compile_definitions(${EXE_NAME} PUBLIC DEV_INTERFACE=${DEV_INTERFACE})
 target_compile_definitions(${EXE_NAME} PUBLIC FORCE_OPENGL=${FORCE_OPENGL})
 target_link_libraries(${EXE_NAME} "game_project_engine" ${SetupLib_libs})
+add_dependencies(${EXE_NAME} BGFXShader_target)
 
 # COPY ASSETS
 file(GLOB ASSET_FILES "${CMAKE_CURRENT_SOURCE_DIR}/assets/[!.]*")

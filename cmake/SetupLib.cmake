@@ -84,6 +84,7 @@ macro(SetupLib_bgfx)
 
     # Force shaderc to always be release, and not to recompile if CMAKE_BUILD_TYPE changes
     set(SetupLib_BGFX_shaderc_PATH "${CMAKE_CURRENT_BINARY_DIR}/shaderc")
+    set(SetupLib_BGFX_shaderc_PATH "${SetupLib_BGFX_shaderc_PATH}" PARENT_SCOPE)
     if (NOT EXISTS "${SetupLib_BGFX_shaderc_PATH}")
         set(TEMP_BUILD_TYPE "${CMAKE_BUILD_TYPE}")
         unset(CMAKE_BUILD_TYPE)

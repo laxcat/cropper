@@ -1,9 +1,9 @@
 $input v_texcoord0, v_norm, v_pos
 
 #include <bgfx_shader.sh>
-#include "../../shared_defines.h"
-#include "../../utils.sh"
-#include "../../engine.h"
+#include "shared_defines.h"
+#include "utils.sh"
+#include "engine.h"
 
 /*
 Blinn-Phong, with simple approximations for roughness/metalic material settings.
