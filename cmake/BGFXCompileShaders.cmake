@@ -116,7 +116,7 @@ function(BGFXCompileShaders)
             # build shader
             add_custom_command(
                 OUTPUT  ${output}
-                DEPENDS ${shaderc} ${input} ${varying} "create_directory_${profile}"
+                DEPENDS ${shaderc} ${input} ${varying} "${output_dir}"
                 COMMAND ${shaderc}
                         --platform osx
                         -p ${profile}
@@ -149,13 +149,13 @@ function(BGFXCompileShaders)
         # set ouput directory
         set(output_dir "${args_output_dir}/${api_name}")
 
-        # create rule to make output directory if necessary
-        if(NOT TARGET "create_directory_${profile}")
-            add_custom_target("create_directory_${profile}"
-                ALL
-                COMMAND ${CMAKE_COMMAND} -E make_directory ${output_dir}
-            )
-        endif()
+        # create rule to make output directory
+        add_custom_command(
+            OUTPUT  "${output_dir}"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${output_dir}"
+            VERBATIM
+            COMMENT "Creating directory for shader output: ${output_dir}"
+        )
 
         # for each shader input directory
         foreach(shader_dir ${args_shader_dirs})
