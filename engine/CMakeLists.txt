@@ -78,7 +78,6 @@ set(BGFXCompileShaders_OuputProfiles "metal")
 if(FORCE_OPENGL)
     set(BGFXCompileShaders_OuputProfiles "150")
 endif()
-file(GLOB shader_dirs RELATIVE "${shader_input_dir}" "${shader_input_dir}/*")
 BGFXCompileShaders(
     embed
     shader_dirs     "${CMAKE_CURRENT_SOURCE_DIR}/shader/shaders/gltf"
