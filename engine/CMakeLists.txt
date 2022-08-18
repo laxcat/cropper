@@ -80,10 +80,10 @@ if(FORCE_OPENGL)
 endif()
 file(GLOB shader_dirs RELATIVE "${shader_input_dir}" "${shader_input_dir}/*")
 BGFXCompileShaders(
+    embed
     shader_dirs     "${CMAKE_CURRENT_SOURCE_DIR}/shader/shaders/gltf"
                     "${CMAKE_CURRENT_SOURCE_DIR}/shader/shaders/unlit"
     profile_list    "${BGFXCompileShaders_OuputProfiles}"
-    output_dir      "${CMAKE_BINARY_DIR}/assets/shaders"
     target          BGFXShader_engine_target
 )
 
