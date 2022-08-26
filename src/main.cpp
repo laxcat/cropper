@@ -5,9 +5,11 @@
 #include <stb/stb_image_write.h>
 #include "../engine/engine.h"
 #include "../engine/MrManager.h"
-#include "../engine/dev/print.h"
 #include "../engine/common/bgfx_extra.h"
+#include "../engine/common/glfw.h"
 #include "../engine/common/Rect.h"
+#include "../engine/common/string_utils.h"
+#include "../engine/dev/print.h"
 #include "CropperQuad.h"
 
 // embedded shader
@@ -494,7 +496,7 @@ int main(int argc, char ** argv) {
         .scrollEvent = scrollEvent,
         .windowTitle = "Cropper",
         .cameraControl = false,
-        .limits = {.minw=200, .minh=200},
+        .windowLimits = {.minw=200, .minh=200},
     });
     if (!didCrop) printf("Quitting without cropping.\n");
     return ret;

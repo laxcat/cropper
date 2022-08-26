@@ -1,6 +1,8 @@
 #include "RenderSystem.h"
+#include <bgfx/platform.h>
 #include "../MrManager.h"
 #include "../common/bgfx_extra.h"
+#include "../common/string_utils.h"
 
 #if FORCE_OPENGL
     #include "../shader/shaders/gltf/vs_gltf.150.bin.geninc"
@@ -202,8 +204,8 @@ void RenderSystem::shutdown() {
     while (it != renderablePool.end()) {
         it = destroy(it->key);
     }
-    mm.memSys.destroyProgram(gltfProgram);
-    mm.memSys.destroyProgram(unlitProgram);
+    bgfx::destroy(gltfProgram);
+    bgfx::destroy(unlitProgram);
     for (auto & t : loadingThreads) {
         t.second.join();
     }

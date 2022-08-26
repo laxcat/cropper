@@ -1,4 +1,5 @@
 #pragma once
+#include <stddef.h>
 
 /*
 Engine entry point.
@@ -23,9 +24,7 @@ int main(int argc, char ** argv) {
     });
 }
 ```
-
 */
-
 
 struct Args {
     int c = 0;
@@ -42,7 +41,7 @@ struct Event {
     double y = 0.0;
 };
 
-struct Limits {
+struct WindowLimits {
     // always passed directly into glfwSetWindowSizeLimits
     // these defaults match GLFW_DONT_CARE, which effectively means no constraints are set
     int minw = -1;
@@ -84,7 +83,10 @@ struct EngineSetup {
 
     Args args;
 
-    Limits limits;
+    WindowLimits windowLimits;
+
+    size_t memSysSize = 1024*1024*20;
+    size_t frameStackSize = 1024*1024*1;
 
     bool transparentFramebuffer = false;
 
