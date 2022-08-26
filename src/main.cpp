@@ -28,6 +28,7 @@ glm::vec2 cropHalfSize = {0.f, 0.f};
 // loaded
 byte_t * imageData = nullptr;
 byte_t * screenData = nullptr;
+size2 imageSize = {0, 0};
 
 // created
 Renderable * imagePlane;
@@ -200,15 +201,54 @@ void updatePositions() {
 }
 
 void crop() {
+    size_t pxCount = cropRect.w * cropRect.h;
     // crop at full size (just image data copy)
-    byte_t * croppedData = (byte_t *)malloc(cropRect.w * cropRect.h * 4);
-    for (int y = 0; y < cropRect.h; ++y) {
-        for (int x = 0; x < cropRect.w; ++x) {
+    byte_t * croppedData = (byte_t *)malloc(pxCount * 4);
+
+    // determine section to copy. test if crop goes beyond borders of image.
+    bool outOfBounds = false;
+    // min/max defaults
+    int minx = 0;
+    int maxx = (int)cropRect.w;
+    int miny = 0;
+    int maxy = (int)cropRect.h;
+    // adjust min/max if out of bounds
+    if (cropRect.x < 0) {
+        minx = -(int)cropRect.x;
+        outOfBounds = true;
+    }
+    if (cropRect.right() > imageSize.w) {
+        maxx = imageSize.w - (int)cropRect.x;
+        outOfBounds = true;
+    }
+    if (cropRect.y < 0) {
+        miny = -cropRect.y;
+        outOfBounds = true;
+    }
+    if (cropRect.top() > imageSize.h) {
+        maxy = imageSize.h - (int)cropRect.y;
+        outOfBounds = true;
+    }
+
+    // fill all with solid color
+    uint32_t color = mm.rendSys.colors.background.asABGRInt();
+    if (outOfBounds) {
+        for (size_t i = 0; i < pxCount; ++i) {
+            ((uint32_t *)croppedData)[i] = color;
+        }
+    }
+
+    // copy data that is within bounds
+    for (int y = miny; y < maxy; ++y) {
+        for (int x = minx; x < maxx; ++x) {
             int dstI = x + y * cropRect.w;
             int srcI = (cropRect.x + x) + (cropRect.y + y) * imageTexture.img.width;
             ((uint32_t *)croppedData)[dstI] = ((uint32_t *)imageData)[srcI];
         }
     }
+
+    print("Cropped: xy: (%d, %d), wh: (%d, %d)\n",
+        (int)cropRect.x, (int)cropRect.y, (int)cropRect.w, (int)cropRect.h);
 
     // crop
     byte_t * newImg = (byte_t *)malloc(outputSize.w * outputSize.h * 4);
@@ -217,8 +257,8 @@ void crop() {
         newImg,         outputSize.w,  outputSize.h,  0, 4
     );
 
-    print("Cropped: xy: (%d, %d), wh: (%d, %d)\n",
-        (int)cropRect.x, (int)cropRect.y, (int)cropRect.w, (int)cropRect.h);
+    print("Resized: (%d, %d) => (%d, %d)\n",
+        (int)cropRect.w, (int)cropRect.h, outputSize.w, outputSize.h);
 
     // write file (always png for now)
     stbi_flip_vertically_on_write(1);
@@ -346,16 +386,15 @@ int preWindow(EngineSetup & setup) {
 }
 
 int postInit(Args const & args) {
-    // program = mm.memSys.loadProgram(mm.assetsPath, "vs_cropper", "fs_cropper");
-    program = createBGFXProgram(vs_cropper_bin, vs_cropper_bin_len, fs_cropper_bin, fs_cropper_bin_len);
+    program = CREATE_BGFX_PROGRAM(cropper);
 
     auto caps = bgfx::getCaps();
     int maxts = caps->limits.maxTextureSize;
     // print("TEX SIZE %d\n", maxts);
 
-    int imgw, imgh, imgc;
+    int imgc;
     stbi_set_flip_vertically_on_load(1);
-    imageData = stbi_load(filename, &imgw, &imgh, &imgc, 0);
+    imageData = stbi_load(filename, &imageSize.w, &imageSize.h, &imgc, 4);
 
     if (!imageData) {
         print("Failed. Could not load %s\n", filename);
@@ -363,14 +402,14 @@ int postInit(Args const & args) {
     }
 
     updateCameraRect();
-    imageRect = cameraRect.aspectFit((float)imgw, (float)imgh);
+    imageRect = cameraRect.aspectFit((float)imageSize.w, (float)imageSize.h);
 
-    if (imgw > maxts || imgh > maxts) {
-        print("Failed. %s (%dx%d) too big for max texture size: %d\n", filename, imgw, imgh, maxts);
+    if (imageSize.w > maxts || imageSize.h > maxts) {
+        print("Failed. %s (%dx%d) too big for max texture size: %d\n", filename, imageSize.w, imageSize.h, maxts);
         return 1;
     }
 
-    print("Loaded: %s (%dx%d)\n", filename, imgw, imgh);
+    print("Loaded: %s (%dx%d)\n", filename, imageSize.w, imageSize.h);
     uint64_t texFlags = BGFX_SAMPLER_MAG_POINT|BGFX_SAMPLER_U_MIRROR|BGFX_SAMPLER_V_MIRROR;
 
     // setup image material/texture
@@ -380,7 +419,7 @@ int postInit(Args const & args) {
     imageMat.roughness() = 1.f;
     imageMat.metallic() = 0.f;
     imageMat.specular() = 0.f;
-    auto imageTex = imageTexture.createImmutable(imgw, imgh, 4, imageData, texFlags);
+    auto imageTex = imageTexture.createImmutable(imageSize.w, imageSize.h, 4, imageData, texFlags);
 
     // setup imagePlane
     imagePlane = mm.rendSys.create(program, "image_plane");
