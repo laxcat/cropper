@@ -42,6 +42,7 @@ glm::vec2 pos = {0.0f, 0.0f};
 Rect cameraRect;
 Rect imageRect;
 Rect cropRect;
+int didCrop = 0;
 
 int parseArgs(Args const & args) {
     char const * usageMsg =
@@ -224,6 +225,7 @@ void crop() {
 
     print("Writing: %s\n", outputFilename);
 
+    didCrop = 1;
     glfwSetWindowShouldClose(mm.window, 1);
 }
 
@@ -394,6 +396,7 @@ int postInit(Args const & args) {
     screenMat.metallic() = 0.f;
     screenMat.specular() = 0.f;
     auto screenTex = screenTexture.createImmutable(screenTexDim, screenTexDim, 4, screenData, texFlags);
+    free(screenData), screenData = NULL;
 
     // setup imagePlane
     screenPlane = mm.rendSys.create(program, "screen_plane");
@@ -453,6 +456,10 @@ void keyEvent(Event const & e) {
             screenPlane->materials[0].baseColor.a = (key == 0) ? 1.f : (float)key * .1f;
         }
 
+        // quit
+        if (e.key == GLFW_KEY_ESCAPE) {
+            glfwSetWindowShouldClose(mm.window, 1);
+        }
         // crop (c, space, or enter)
         if (e.key == GLFW_KEY_C || e.key == GLFW_KEY_SPACE || e.key == GLFW_KEY_ENTER || e.key == GLFW_KEY_KP_ENTER) {
             crop();
@@ -475,7 +482,7 @@ void scrollEvent(Event const & e) {
 }
 
 int main(int argc, char ** argv) {
-    return main_desktop({
+    int ret = main_desktop({
         .args = {argc, argv},
         .preWindow = preWindow,
         .postInit = postInit,
@@ -489,4 +496,6 @@ int main(int argc, char ** argv) {
         .cameraControl = false,
         .limits = {.minw=200, .minh=200},
     });
+    if (!didCrop) printf("Quitting without cropping.\n");
+    return ret;
 }
