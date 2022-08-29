@@ -13,8 +13,13 @@
 #include "CropperQuad.h"
 
 // embedded shader
-#include "shader/cropper/vs_cropper.metal.bin.geninc"
-#include "shader/cropper/fs_cropper.metal.bin.geninc"
+#if FORCE_OPENGL
+    #include "shader/cropper/vs_cropper.150.bin.geninc"
+    #include "shader/cropper/fs_cropper.150.bin.geninc"
+#else
+    #include "shader/cropper/vs_cropper.metal.bin.geninc"
+    #include "shader/cropper/fs_cropper.metal.bin.geninc"
+#endif
 
 // populated by args
 char const * filename = nullptr;

@@ -7,15 +7,16 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
 # PROJECT
 project(cropper_project VERSION 0.2.0 LANGUAGES CXX C OBJCXX OBJC)
 
-set(CMAKE_POSITION_INDEPENDENT_CODE ON)
-set(FORCE_OPENGL OFF)
+set(CMAKE_POSITION_INDEPENDENT_CODE 1)
+set(FORCE_OPENGL 0)
 
 if(NOT DEFINED DEV_INTERFACE)
     set(DEV_INTERFACE 0)
 endif()
 
-set(CMAKE_SKIP_INSTALL_RULES ON QUIET)
-set(BX_SILENCE_DEBUG_OUTPUT ON)
+set(CMAKE_SKIP_INSTALL_RULES 1 QUIET)
+set(BX_SILENCE_DEBUG_OUTPUT 1)
+set(ENABLE_IMGUI 1)
 
 # MAIN ENGINE
 set(SetupLib_include_dirs)
@@ -33,8 +34,13 @@ BGFXCompileShaders(
 include_directories(${SetupLib_include_dirs})
 set(EXE_NAME cropper)
 add_executable(${EXE_NAME} "${CMAKE_CURRENT_SOURCE_DIR}/src/main.cpp")
-target_compile_definitions(${EXE_NAME} PUBLIC DEV_INTERFACE=${DEV_INTERFACE})
-target_compile_definitions(${EXE_NAME} PUBLIC FORCE_OPENGL=${FORCE_OPENGL})
+
+target_compile_definitions(${EXE_NAME} PUBLIC
+    DEV_INTERFACE=${DEV_INTERFACE}
+    FORCE_OPENGL=${FORCE_OPENGL}
+    ENABLE_IMGUI=${ENABLE_IMGUI}
+)
+
 target_link_libraries(${EXE_NAME} "game_project_engine" ${SetupLib_libs})
 add_dependencies(${EXE_NAME} BGFXShader_target)
 
