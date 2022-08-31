@@ -21,6 +21,11 @@
     #include "shader/cropper/fs_cropper.metal.bin.geninc"
 #endif
 
+#if ENABLE_IMGUI
+#include "imgui_impl_bgfx.h"
+#include <backends/imgui_impl_glfw.h>
+#endif
+
 // populated by args
 char const * filename = nullptr;
 char outputFilename[256] = {0};
@@ -50,7 +55,9 @@ glm::vec2 pos = {0.0f, 0.0f};
 Rect cameraRect;
 Rect imageRect;
 Rect cropRect;
-int didCrop = 0;
+bool didCrop = false;
+bool focusOnColor = false;
+bool showingHelpWindow = false;
 
 int parseArgs(Args const & args) {
     char const * usageMsg =
@@ -272,7 +279,7 @@ void crop() {
 
     print("Writing: %s\n", outputFilename);
 
-    didCrop = 1;
+    didCrop = true;
     glfwSetWindowShouldClose(mm.window, 1);
 }
 
@@ -464,11 +471,82 @@ int postInit(Args const & args) {
     mm.camera.reset();
     updatePositions();
 
+    // disable imgui.ini
+    ImGui::GetIO().IniFilename = NULL;
+
     return 0;
 }
 
 void preDraw() {
     updatePositions();
+}
+
+void preEditor() {
+    using namespace ImGui;
+
+    ImGuiStyle& style = GetStyle();
+    style.Colors[ImGuiCol_WindowBg].w = 0.5f;
+
+    SetNextWindowPos({0, 0}, ImGuiCond_Once);
+    SetNextWindowCollapsed(!showingHelpWindow && !focusOnColor);
+
+    char const * label = (showingHelpWindow) ?
+        "Help (H or ?)###help" :
+        "H / ?###help";
+
+    float h = 310.f;
+
+    if (Begin(label, NULL, ImGuiWindowFlags_NoResize)) {
+        float w = 250.f;
+
+        SetWindowSize({w+16.f, h});
+
+        Text(
+            "How to Use:\n"
+            "Click and drag. Scroll to zoom.\n"
+            "To crop: C or SPACE or RETURN.\n"
+            "To quit/cancel crop: Q or ESC.\n\n"
+            "Info:\n"
+            "Loaded: %s (%dx%d)\n"
+            "Ouput size: %dx%d (%d:%d)\n"
+            "Ouput file: %s\n"
+            ,
+            filename, imageSize.w, imageSize.h,
+            outputSize.w, outputSize.h, ratioNumer, ratioDenom,
+            outputFilename
+        );
+        Dummy({0, 10});
+        Text(
+            "Crop:\n(%-5d,%-5d) (%-5dx%-5d)\n",
+            (int)cropRect.x, (int)cropRect.y, (int)cropRect.w, (int)cropRect.h
+        );
+        Dummy({0, 10});
+
+        TextUnformatted("Background (B)");
+        if (focusOnColor) {
+            SetKeyboardFocusHere(0);
+            focusOnColor = false;
+        }
+        PushItemWidth(w);
+        ColorEdit3(
+            "##bg",
+            (float *)&mm.rendSys.colors.background.data,
+            ImGuiColorEditFlags_DisplayHex
+        );
+        Dummy({0, 10});
+
+        TextUnformatted("Crop Opacity (0-9)");
+        int opacity = (int)roundf(screenPlane->materials[0].baseColor.a * 100.f);
+        PushItemWidth(w);
+        SliderInt("##screen", &opacity, 0, 100, "%d%");
+        screenPlane->materials[0].baseColor.a = (float)opacity / 100.f;
+
+    }
+    else {
+        SetWindowSize({65.f, h});
+    }
+    showingHelpWindow = !IsWindowCollapsed();
+    End();
 }
 
 void postResize() {
@@ -489,11 +567,8 @@ void preShutdown() {
 }
 
 void keyEvent(Event const & e) {
-    static bool leftShiftDown = false;
-    static bool rightShiftDown = false;
-    if (e.key == GLFW_KEY_LEFT_SHIFT)  leftShiftDown = (bool)e.action;
-    if (e.key == GLFW_KEY_RIGHT_SHIFT) rightShiftDown = (bool)e.action;
-    panScale = (leftShiftDown || rightShiftDown) ? 0.3f : 1.0f;
+    bool shift = (e.mods & GLFW_MOD_SHIFT);
+    panScale = (shift) ? 0.3f : 1.0f;
 
     if (e.action == GLFW_PRESS) {
         // set alpha of screen
@@ -502,12 +577,23 @@ void keyEvent(Event const & e) {
             screenPlane->materials[0].baseColor.a = (key == 0) ? 1.f : (float)key * .1f;
         }
 
+        // show help/control window
+        // TODO: unbind from english keyboard
+        else if (e.key == GLFW_KEY_H || (shift && e.key == GLFW_KEY_SLASH)) {
+            showingHelpWindow = !showingHelpWindow;
+        }
+
+        // highlight color
+        else if (e.key == GLFW_KEY_B) {
+            focusOnColor = true;
+        }
+
         // quit
-        if (e.key == GLFW_KEY_ESCAPE) {
+        else if (e.key == GLFW_KEY_ESCAPE || e.key == GLFW_KEY_Q) {
             glfwSetWindowShouldClose(mm.window, 1);
         }
         // crop (c, space, or enter)
-        if (e.key == GLFW_KEY_C || e.key == GLFW_KEY_SPACE || e.key == GLFW_KEY_ENTER || e.key == GLFW_KEY_KP_ENTER) {
+        else if (e.key == GLFW_KEY_C || e.key == GLFW_KEY_SPACE || e.key == GLFW_KEY_ENTER || e.key == GLFW_KEY_KP_ENTER) {
             crop();
         }
     }
@@ -533,6 +619,7 @@ int main(int argc, char ** argv) {
         .preWindow = preWindow,
         .postInit = postInit,
         .preDraw = preDraw,
+        .postEditor = preEditor,
         .postResize = postResize,
         .preShutdown = preShutdown,
         .keyEvent = keyEvent,

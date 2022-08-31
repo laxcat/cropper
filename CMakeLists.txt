@@ -8,7 +8,7 @@ set(CMAKE_MODULE_PATH "${CMAKE_MODULE_PATH}" "${CMAKE_CURRENT_SOURCE_DIR}/cmake"
 project(cropper_project VERSION 0.2.0 LANGUAGES CXX C OBJCXX OBJC)
 
 set(CMAKE_POSITION_INDEPENDENT_CODE 1)
-set(FORCE_OPENGL 0)
+set(FORCE_OPENGL 1)
 
 if(NOT DEFINED DEV_INTERFACE)
     set(DEV_INTERFACE 0)
@@ -22,11 +22,16 @@ set(ENABLE_IMGUI 1)
 set(SetupLib_include_dirs)
 add_subdirectory("${CMAKE_CURRENT_SOURCE_DIR}/engine")
 
+set(ProfileList "metal")
+if(FORCE_OPENGL)
+    set(ProfileList "150")
+endif()
+
 include(BGFXCompileShaders)
 BGFXCompileShaders(
     embed
     shader_dirs     "${CMAKE_CURRENT_SOURCE_DIR}/src/shader/cropper"
-    profile_list    "metal"
+    profile_list    "${ProfileList}"
     include_dirs    "${CMAKE_CURRENT_SOURCE_DIR}/engine/shader"
 )
 
