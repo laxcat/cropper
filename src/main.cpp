@@ -213,7 +213,12 @@ void updatePositions() {
 }
 
 void crop() {
-    size_t pxCount = cropRect.w * cropRect.h;
+    int cx = (int)cropRect.x;
+    int cy = (int)cropRect.y;
+    int cw = (int)cropRect.w;
+    int ch = (int)cropRect.h;
+
+    size_t pxCount = cw * ch;
     // crop at full size (just image data copy)
     byte_t * croppedData = (byte_t *)malloc(pxCount * 4);
 
@@ -221,16 +226,16 @@ void crop() {
     bool outOfBounds = false;
     // min/max defaults
     int minx = 0;
-    int maxx = (int)cropRect.w;
+    int maxx = cw;
     int miny = 0;
-    int maxy = (int)cropRect.h;
+    int maxy = ch;
     // adjust min/max if out of bounds
     if (cropRect.x < 0) {
-        minx = -(int)cropRect.x;
+        minx = -cx;
         outOfBounds = true;
     }
     if (cropRect.right() > imageSize.w) {
-        maxx = imageSize.w - (int)cropRect.x;
+        maxx = imageSize.w - cx;
         outOfBounds = true;
     }
     if (cropRect.y < 0) {
@@ -238,7 +243,7 @@ void crop() {
         outOfBounds = true;
     }
     if (cropRect.top() > imageSize.h) {
-        maxy = imageSize.h - (int)cropRect.y;
+        maxy = imageSize.h - cy;
         outOfBounds = true;
     }
 
@@ -259,8 +264,7 @@ void crop() {
         }
     }
 
-    print("Cropped: xy: (%d, %d), wh: (%d, %d)\n",
-        (int)cropRect.x, (int)cropRect.y, (int)cropRect.w, (int)cropRect.h);
+    print("Cropped: xy: (%d, %d), wh: (%d, %d)\n", cx, cy, cw, ch);
 
     // crop
     byte_t * newImg = (byte_t *)malloc(outputSize.w * outputSize.h * 4);
@@ -269,8 +273,7 @@ void crop() {
         newImg,         outputSize.w,  outputSize.h,  0, 4
     );
 
-    print("Resized: (%d, %d) => (%d, %d)\n",
-        (int)cropRect.w, (int)cropRect.h, outputSize.w, outputSize.h);
+    print("Resized: (%d, %d) => (%d, %d)\n", cw, ch, outputSize.w, outputSize.h);
 
     // write file (always png for now)
     stbi_flip_vertically_on_write(1);
@@ -278,6 +281,18 @@ void crop() {
     //stbi_write_png(char const *filename, int w, int h, int comp, const void *data, int stride_in_bytes);
 
     print("Writing: %s\n", outputFilename);
+
+    print(
+        "JSON: {\n"
+        "    full:{w:%u,h:%u},\n"
+        "    crop:{x:%u,y:%u,w:%u,h:%u,inset:[%u,%u,%u,%u]},\n"
+        "    out:{w:%u,h%u}\n"
+        "}\n",
+        imageSize.w, imageSize.h,                       // full wh
+        cx, cy, cw, ch,                                 // crop xywh
+        cy, imageSize.w-cx-cw, imageSize.h-cy-ch, cx,   // crop inset(trbl)
+        outputSize.w, outputSize.h                      // out wh
+    );
 
     didCrop = true;
     glfwSetWindowShouldClose(mm.window, 1);
