@@ -12,21 +12,6 @@
 #include "MrManager.h"
 #include "engine.h"
 
-
-// static void shouldImGUICaptureKeyboard() {
-//     return true
-//     #if ENABLE_IMGUI
-//         && ImGui::GetIO().WantCaptureKeyboard
-//         #if DEV_INTERFACE
-//             && mm.devOverlay.isShowingImGUI()
-//         #endif // ENABLE_IMGUI
-//     #endif // ENABLE_IMGUI
-// }
-
-// static void shouldImGUICaptureMouse() {
-
-// }
-
 static void glfw_errorCallback(int error, const char *description) {
     fprintf(stderr, "GLFW error %d: %s\n", error, description);
 }
